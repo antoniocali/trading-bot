@@ -23,16 +23,15 @@ class Trader(context: ActorContext[Trader.Command])
   import Trader.Operations._
   var lastOp: Option[Operation] = None
   var lastPrice: Option[Double] = None
-  val buyActor = context.spawn(BuyOperator(), "buy-operator")
-  val sellActor = context.spawn(SellOperator(), name = "sell-operator")
+  val operatorActor = context.spawn(Operator(), "operator")
 
   override def onMessage(msg: Trader.Command): Behavior[Trader.Command] =
     msg match {
-      case BuyOperator.Bought(price) =>
+      case Operator.Bought(price) =>
         lastOp = Some(Trader.Operations.Buy)
         lastPrice = Some(price)
         Behaviors.same
-      case SellOperator.Sold(price) =>
+      case Operator.Sold(price) =>
         lastOp = Some(Trader.Operations.Sell)
         lastPrice = Some(price)
         Behaviors.same
@@ -41,19 +40,19 @@ class Trader(context: ActorContext[Trader.Command])
           case Some(value) =>
             value match {
               case Buy =>
-                buyActor ! BuyOperator.BuyOperation(price,
+                operatorActor ! Operator.BuyOperation(price,
                                                     lastPrice.get,
                                                     this.context.self)
               case Sell =>
-                sellActor ! SellOperator.SellOperation(price,
+                operatorActor ! Operator.SellOperation(price,
                                                        lastPrice.get,
                                                        this.context.self)
             }
           case None =>
-            buyActor ! BuyOperator.BuyOperation(price, 0, this.context.self)
+            operatorActor ! Operator.BuyOperation(price, 0, this.context.self)
         }
         this
-      case BuyOperator.NoOp | SellOperator.NoOp => Behaviors.same
+      case Operator.NoOp => Behaviors.same
 
     }
 }
